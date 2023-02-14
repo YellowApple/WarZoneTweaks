@@ -36,9 +36,7 @@ if onServer() then
 
         local delta = 0
         if     WarZoneCheck.controlsThisSector(attacker) then delta = 0
-        elseif victim:getValue("is_pirate")              then delta = 0
-        elseif victim:getValue("is_xsotan")              then delta = 0
-        elseif victim:getValue("is_persecutor")          then delta = 0
+        elseif WarZoneCheck.shouldIgnore(victim)         then delta = 0
         elseif victim.type == EntityType.Ship            then delta = 10
         elseif victim.type == EntityType.Station         then delta = 100
         elseif victim.type == EntityType.Turret          then delta = 5
@@ -48,6 +46,16 @@ if onServer() then
 
         print("WarZoneCheck: increasing war zone score by ", delta, " points")
         WarZoneCheck.increaseScore(delta)
+    end
+
+    function WarZoneCheck.shouldIgnore(victim)
+	if victim:getValue("is_pirate") then return true end
+	if victim:getValue("is_xsotan") then return true end
+	if victim:getValue("is_persecutor") then return true end
+	if victim:hasScript("data/scripts/entity/story/aibehaviour.lua") then
+	    return true
+	end
+	return false
     end
 
     -- This probably should be modded into the Sector namespace somehow
@@ -64,8 +72,13 @@ if onServer() then
 
     function WarZoneCheck.onDestroyed(destroyedId, destroyerId)
         local victim = Entity(destroyedId)
+        if not victim then return end
+        local destroyer = Entity(destroyerId)
+        if not destroyer then return end
+        print("WarZoneCheck:", destroyer.name, "(", destroyerId.string, ")",
+              "destroyed", victim.name, "(", destroyedId.string, ")")
         local defender = victim.factionIndex
-        local attacker = Entity(destroyerId).factionIndex
+        local attacker = destroyer.factionIndex
         WarZoneCheck.maybeIncreaseScore(victim, defender, attacker)
     end
 
